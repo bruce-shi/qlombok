@@ -1,0 +1,93 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
+
+
+plugins {
+    id 'java'
+}
+
+group 'com.collectz'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'idea'
+
+idea {
+    module {
+        outputDir file("$buildDir/classes/main")
+        testOutputDir file("$buildDir/classes/test")
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+configurations {
+    lombok
+    compileOnly
+}
+
+def unpackedAndRenamedLombokDir = file("$buildDir/lombok")
+
+task unpackAndRenameLombok {
+    inputs.files configurations.lombok
+    outputs.dir unpackedAndRenamedLombokDir
+    doFirst {
+        mkdir unpackedAndRenamedLombokDir
+        delete unpackedAndRenamedLombokDir.listFiles()
+    }
+    doLast {
+        copy {
+            from zipTree(configurations.lombok.singleFile)
+            into unpackedAndRenamedLombokDir
+            include 'lombok/**/*'
+            rename "(.*)[.]SCL[.]lombok", '$1.class'
+        }
+    }
+}
+
+tasks.compileJava {
+    dependsOn unpackAndRenameLombok
+}
+
+
+test {
+    useJUnitPlatform()
+    systemProperty "gradleBuildDir", buildDir
+}
+
+dependencies {
+    compileOnly files("${System.properties['java.home']}/../lib/tools.jar")
+    compileOnly 'org.kohsuke.metainf-services:metainf-services:1.8'
+    compileOnly "org.eclipse.jdt:org.eclipse.jdt.core:3.10.0"
+    compileOnly 'javax.inject:javax.inject:1'
+    lombok 'org.projectlombok:lombok:1.18.10'
+//    compileOnly 'org.projectlombok:lombok:1.18.10'
+    compile files(unpackedAndRenamedLombokDir)
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.5.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.5.1'
+    testCompile 'com.google.testing.compile:compile-testing:0.18'
+    testCompile files("${System.properties['java.home']}/../lib/tools.jar")
+    testCompile 'commons-io:commons-io:2.6'
+    testCompile 'org.assertj:assertj-core:3.12.0'
+    testCompile 'org.ow2.asm:asm:7.1'
+    testCompile 'org.ow2.asm:asm-util:7.1'
+    testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.12.1'
+}
